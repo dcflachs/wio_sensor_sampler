@@ -213,6 +213,11 @@ def main():
     node_reg = re.compile("\/v1\/node[^ ]*")
     url = '{0}/{1}'.format(base_url, API_GET_NODES)
 
+    print(base_url)
+    print(influx_host)
+    print(database_name)
+    print(node_name_frags)
+    
     try:
         while 1:
             #Check for new Nodes
