@@ -71,7 +71,7 @@ MEASUREMENT_NAMES = [
 
 #Settings
 user_token = os.getenv('WIO_USER_TOKEN', '')
-node_name_frags = loads(os.getenv('WIO_NODE_NAME_FRAGMENTS', '[]'))
+node_name_frags = [i for i in os.getenv('WIO_NODE_NAME_FRAGMENTS', '[]').split(",")] 
 sample_delay_s = os.getenv('WIO_SAMPLE_DELAY_S', 60)
 check_delay_s = os.getenv('WIO_CHECK_DELAY_S', 300)
 wio_host = os.getenv('WIO_HOST', '')
@@ -87,7 +87,6 @@ base_url = '{0}://{1}:{2}'.format(
 influx_host = os.getenv('INFLUX_HOST', '')
 influx_port = os.getenv('INFLUX_PORT', 8086)
 database_name = os.getenv('INFLUX_DB_NAME', 'test')
-
 
 executor = ThreadPoolExecutor(max_workers=1)
 client = InfluxDBClient(host=influx_host, port=influx_port)
