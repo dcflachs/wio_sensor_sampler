@@ -71,7 +71,7 @@ MEASUREMENT_NAMES = [
 
 #Settings
 user_token = os.getenv('WIO_USER_TOKEN', '')
-node_name_frags = json.loads(os.getenv('WIO_NODE_NAME_FRAGMENTS', '[]'))
+node_name_frags = loads(os.getenv('WIO_NODE_NAME_FRAGMENTS', '[]'))
 sample_delay_s = os.getenv('WIO_SAMPLE_DELAY_S', 60)
 check_delay_s = os.getenv('WIO_CHECK_DELAY_S', 300)
 wio_host = os.getenv('WIO_HOST', '')
