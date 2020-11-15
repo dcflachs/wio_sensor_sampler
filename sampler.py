@@ -217,6 +217,7 @@ def main():
     print(influx_host)
     print(database_name)
     print(node_name_frags)
+    print(url)
     
     try:
         while 1:
