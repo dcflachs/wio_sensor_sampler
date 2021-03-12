@@ -77,6 +77,7 @@ check_delay_s = os.getenv('WIO_CHECK_DELAY_S', 300)
 wio_host = os.getenv('WIO_HOST', '')
 wio_proto = os.getenv('WIO_PROTO', 'https')
 wio_port = os.getenv('WIO_PORT', '447')
+samples_db_file = os.getenv('WIO_SAMPLES_JSON_FILE', '/samples_db.json')
 
 base_url = '{0}://{1}:{2}'.format(
             wio_proto,
@@ -105,9 +106,9 @@ def send_samples(sample):
         if ret:
             samples_to_write.clear()
     
-def sampler_thread(delay, run_event, node_token, node_name, node_sn):
-    url_len = '{0}/{1}'.format(base_url, API_GET_NODE_EVENT_LENGTH)
-    url_pop = '{0}/{1}'.format(base_url, API_GET_NODE_EVENT_POP)
+def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_sn):
+    url_len = '{0}/{1}'.format(node_base_url, API_GET_NODE_EVENT_LENGTH)
+    url_pop = '{0}/{1}'.format(node_base_url, API_GET_NODE_EVENT_POP)
     sampler_state = STATE_SAMPLER_START
     while True:
 #         print("Node Thread: %s" %(node_token))
@@ -205,6 +206,8 @@ def sampler_thread(delay, run_event, node_token, node_name, node_sn):
             break
 
 def main():
+    global samples_to_write
+    
     thread_dict = {}
     run_event = threading.Event()
     run_event.clear()
@@ -218,6 +221,15 @@ def main():
     print(node_name_frags)
     print(url)
     
+    if os.path.exists(samples_db_file):
+        try:
+            with open(samples_db_file,"r") as json_file:
+                samples_to_write = json.load(json_file)
+        except Exception as e:
+            print(e)
+            print("Failed to load samples json file!")
+            pass
+        
     try:
         while 1:
             #Check for new Nodes
@@ -234,7 +246,9 @@ def main():
                     if node['name'] in thread_dict and (thread_dict[node['name']].is_alive()):
                         print('Node: %s, already monitored' % node['name'])
                         continue
-                    x = threading.Thread(target=sampler_thread, args=(sample_delay_s, run_event, node['node_key'], node['name'], node['node_sn']))
+                    
+                    node_base_url = node['dataxserver'] if node['dataxserver'] != None else base_url
+                    x = threading.Thread(target=sampler_thread, args=(sample_delay_s, run_event, node_base_url, node['node_key'], node['name'], node['node_sn']))
                     thread_dict[node['name']] = x
                     x.start()
             except Exception as e:
@@ -251,7 +265,16 @@ def main():
             val.join()
         print("threads successfully closed")
         if samples_to_write:
-            executor.submit(send_samples, None)
+            fut  = executor.submit(send_samples, None)
+            fut.result()
+            if samples_to_write:
+                try:
+                    with open(samples_db_file, 'w') as fp:
+                        json.dump(samples_to_write, fp)
+                except Exception as e:
+                    print(e)
+                    print("Failed to save leftover sample!")
+                    pass                
 
 if __name__ == "__main__":
     main()
