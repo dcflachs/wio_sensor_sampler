@@ -13,6 +13,7 @@ from datetime import datetime
 from tzlocal import get_localzone
 import pytz
 import os
+import logging
 
 urllib3.disable_warnings()
 
@@ -110,6 +111,7 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
     url_len = '{0}/{1}'.format(node_base_url, API_GET_NODE_EVENT_LENGTH)
     url_pop = '{0}/{1}'.format(node_base_url, API_GET_NODE_EVENT_POP)
     sampler_state = STATE_SAMPLER_START
+    logger_thread = logging.getLogger(node_name)
     while True:
 #         print("Node Thread: %s" %(node_token))
         grove_name = None
@@ -199,14 +201,18 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
         except ValueError:
             pass
         except Exception as e:
-            print(e)
+            logger_thread.error(e)
             pass
         
         if run_event.wait(delay):
+            logger_thread.info("Thread Ending")
             break
 
 def main():
     global samples_to_write
+    
+    logging.basicConfig(format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level=logging.INFO)
+    logger_main = logging.getLogger('main')
     
     thread_dict = {}
     run_event = threading.Event()
@@ -215,36 +221,37 @@ def main():
     node_reg = re.compile("\/v1\/node[^ ]*")
     url = '{0}/{1}'.format(base_url, API_GET_NODES)
 
-    print(base_url)
-    print(influx_host)
-    print(database_name)
-    print(node_name_frags)
-    print(url)
+    logger_main.info(base_url)
+    logger_main.info(influx_host)
+    logger_main.info(database_name)
+    logger_main.info(node_name_frags)
+    logger_main.info(url)
     
     if os.path.exists(samples_db_file):
         try:
             with open(samples_db_file,"r") as json_file:
                 samples_to_write = json.load(json_file)
         except Exception as e:
-            print(e)
-            print("Failed to load samples json file!")
+            logger_main.error(e)
+            logger_main.error("Failed to load samples json file!")
             pass
         
     try:
+        
         while 1:
             #Check for new Nodes
             try:
-                print(local_tz.localize(datetime.now()).strftime("%d/%m/%Y %H:%M:%S"))
+                logger_main.info(local_tz.localize(datetime.now()).strftime("%d/%m/%Y %H:%M:%S"))
 
                 r = requests.get(url, params={'access_token':user_token}, timeout=5, verify=False)
                 nodes_json = r.json()
                 for node in nodes_json['nodes']:
-                    print('Found Node: %s, Online: %s' % (node['name'], node['online']))
+                    logger_main.info('Found Node: %s, Online: %s' % (node['name'], node['online']))
                     if node_name_frags != None and not any([val in node['name'] for val in node_name_frags]):
-                        print('Skipping Node: %s, no filter match' % node['name'])
+                        logger_main.info('Skipping Node: %s, no filter match' % node['name'])
                         continue
                     if node['name'] in thread_dict and (thread_dict[node['name']].is_alive()):
-                        print('Node: %s, already monitored' % node['name'])
+                        logger_main.info('Node: %s, already monitored' % node['name'])
                         continue
                     
                     node_base_url = node['dataxserver'] if node['dataxserver'] != None else base_url
@@ -252,18 +259,18 @@ def main():
                     thread_dict[node['name']] = x
                     x.start()
             except Exception as e:
-                print(e)
-                print("Failed to get nodes list!")
+                logger_main.error(e)
+                logger_main.error("Failed to get nodes list!")
                 pass
             
             time.sleep(check_delay_s)
-            print("\n\n")
+#             print("\n\n")
     except KeyboardInterrupt:
-        print("Shutdown Requested attempting to close threads.")
+        logger_main.info("Shutdown Requested attempting to close threads.")
         run_event.set()
         for key, val in thread_dict.items():
             val.join()
-        print("threads successfully closed")
+        logger_main.info("Threads successfully closed")
         if samples_to_write:
             fut  = executor.submit(send_samples, None)
             fut.result()
@@ -272,8 +279,8 @@ def main():
                     with open(samples_db_file, 'w') as fp:
                         json.dump(samples_to_write, fp)
                 except Exception as e:
-                    print(e)
-                    print("Failed to save leftover sample!")
+                    logger_main.error(e)
+                    logger_main.error("Failed to save leftover sample!")
                     pass                
 
 if __name__ == "__main__":
