@@ -124,7 +124,7 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
 #             if event_q_len['length'] >= 5:
             if True:
                 while True:
-                    raw = requests.get(url_pop, params={'access_token':node_token}, timeout=5, verify=False)
+                    raw = requests.get(url_pop, params={'access_token':node_token}, timeout=20, verify=False)
                     data_json = raw.json()
                     if 'error' in data_json and data_json['error'] == "Node Unknown":
 #                         print("Node Thread: %s - Empty Queue" %(node_token))
