@@ -246,12 +246,12 @@ def main():
                 r = requests.get(url, params={'access_token':user_token}, timeout=5, verify=False)
                 nodes_json = r.json()
                 for node in nodes_json['nodes']:
-                    logger_main.info('Found Node: %s, Online: %s' % (node['name'], node['online']))
+                    logger_main.debug('Found Node: %s, Online: %s' % (node['name'], node['online']))
                     if node_name_frags != None and not any([val in node['name'] for val in node_name_frags]):
-                        logger_main.info('Skipping Node: %s, no filter match' % node['name'])
+                        logger_main.debug('Skipping Node: %s, no filter match' % node['name'])
                         continue
                     if node['name'] in thread_dict and (thread_dict[node['name']].is_alive()):
-                        logger_main.info('Node: %s, already monitored' % node['name'])
+                        logger_main.debug('Node: %s, already monitored' % node['name'])
                         continue
                     
                     node_base_url = node['dataxserver'] if node['dataxserver'] != None else base_url
