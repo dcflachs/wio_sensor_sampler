@@ -112,92 +112,81 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
     url_pop = '{0}/{1}'.format(node_base_url, API_GET_NODE_EVENT_POP)
     sampler_state = STATE_SAMPLER_START
     logger_thread = logging.getLogger(node_name)
+    logger_thread.info("Thread Started for Node: %s" %(node_token))
     while True:
-#         print("Node Thread: %s" %(node_token))
         grove_name = None
         function_name = None
         value = None
         timestamp = None
         try:
-#             raw = requests.get(url_len, params={'access_token':node_token}, timeout=1, verify=False)
-#             event_q_len = raw.json()
-#             if event_q_len['length'] >= 5:
-            if True:
-                while True:
-                    raw = requests.get(url_pop, params={'access_token':node_token}, timeout=20, verify=False)
-                    data_json = raw.json()
-                    if 'error' in data_json and data_json['error'] == "Node Unknown":
-#                         print("Node Thread: %s - Empty Queue" %(node_token))
-                        break
-                    
-                    if (EVENT_DATA_KEY in data_json) and (EVENT_SAMPLER_START in data_json[EVENT_DATA_KEY]) and ("Start" in data_json[EVENT_DATA_KEY][EVENT_SAMPLER_START]):
-#                       time_stamp = datetime.strptime(data_json['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")
+            while True:
+                raw = requests.get(url_pop, params={'access_token':node_token}, timeout=20, verify=False)
+                data_json = raw.json()
+                if 'error' in data_json and data_json['error'] == "Node Unknown":
+                    logger_thread.debug("Node Thread: %s - Empty Queue" %(node_token))
+                    break
+                if (EVENT_DATA_KEY in data_json):
+                    if (EVENT_SAMPLER_START in data_json[EVENT_DATA_KEY]) and ("Start" in data_json[EVENT_DATA_KEY][EVENT_SAMPLER_START]):
                         sampler_state = STATE_SAMPLER_GROVE
-                        continue
-                    elif sampler_state == STATE_SAMPLER_GROVE:
-                        if (EVENT_DATA_KEY in data_json) and (EVENT_SAMPLER_GROVE in data_json[EVENT_DATA_KEY]):
-                            grove_name = data_json[EVENT_DATA_KEY][EVENT_SAMPLER_GROVE]
-                            sampler_state = STATE_SAMPLER_FUNC
-                        elif (EVENT_DATA_KEY in data_json) and (EVENT_SAMPLER_UPTIME in data_json[EVENT_DATA_KEY]):
-                            grove_name = "SensorSampler"
-                            function_name = "uptime"
-                            value = float(data_json[EVENT_DATA_KEY][EVENT_SAMPLER_UPTIME])
-                            timestamp = local_tz.localize(datetime.strptime(data_json['timestamp'], "%Y-%m-%dT%H:%M:%S.%f"))
-                            data = {
-                                    "measurement": "uptime",
-                                    "tags": {
-                                            "node_name": node_name,
-                                            "node_sn": node_sn,
-                                            "grove": grove_name,
-                                            "function": function_name,
-                                    },
-                                    "fields": {
-                                        "value": value,
-                                    },
-                                    "time": timestamp.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-                            }
-                            executor.submit(send_samples, data)
-                            # print("%s - %s : %s : %s" % (timestamp, grove_name, function_name, value))
-                            sampler_state = STATE_SAMPLER_GROVE
-                            continue
-                        else:
-                            sampler_state = STATE_SAMPLER_START
-                        continue
-                    elif sampler_state == STATE_SAMPLER_FUNC:
-                        if (EVENT_DATA_KEY in data_json) and (EVENT_SAMPLER_FUNCTION in data_json[EVENT_DATA_KEY]):
-                            function_name = data_json[EVENT_DATA_KEY][EVENT_SAMPLER_FUNCTION]
-                            sampler_state = STATE_SAMPLER_VALUE
-                        else:
-                            sampler_state = STATE_SAMPLER_START
-                        continue
-                    elif sampler_state == STATE_SAMPLER_VALUE:
-                        if (EVENT_DATA_KEY in data_json) and (EVENT_SAMPLER_VALUE in data_json[EVENT_DATA_KEY]):
-                            value = float(data_json[EVENT_DATA_KEY][EVENT_SAMPLER_VALUE])
-                            timestamp = local_tz.localize(datetime.strptime(data_json['timestamp'], "%Y-%m-%dT%H:%M:%S.%f"))
-            
-                            measurment_name = function_name
-                            for entry in MEASUREMENT_NAMES:
-                                if grove_name in entry['groves'] and function_name in entry['funcs']:
-                                    measurment_name = entry['name']
-                            data = {
-                                    "measurement": measurment_name,
-                                    "tags": {
-                                            "node_name": node_name,
-                                            "node_sn": node_sn,
-                                            "grove": grove_name,
-                                            "function": function_name,
-                                    },
-                                    "fields": {
-                                        "value": value,
-                                    },
-                                    "time": timestamp.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-                            }
-                            executor.submit(send_samples, data)
-#                             print("%s - %s : %s : %s -- %s" % (timestamp, grove_name, function_name, value, measurment_name))
-                            sampler_state = STATE_SAMPLER_GROVE
-                        else:
-                            sampler_state = STATE_SAMPLER_START
-                        continue
+                    elif (EVENT_SAMPLER_GROVE in data_json[EVENT_DATA_KEY]):
+                        continue if sampler_state != STATE_SAMPLER_GROVE
+                        grove_name = data_json[EVENT_DATA_KEY][EVENT_SAMPLER_GROVE]
+                        sampler_state = STATE_SAMPLER_FUNC
+                    elif (EVENT_SAMPLER_UPTIME in data_json[EVENT_DATA_KEY]):
+                        grove_name = "SensorSampler"
+                        function_name = "uptime"
+                        value = float(data_json[EVENT_DATA_KEY][EVENT_SAMPLER_UPTIME])
+                        timestamp = local_tz.localize(datetime.strptime(data_json['timestamp'], "%Y-%m-%dT%H:%M:%S.%f"))
+                        data = {
+                                "measurement": "uptime",
+                                "tags": {
+                                        "node_name": node_name,
+                                        "node_sn": node_sn,
+                                        "grove": grove_name,
+                                        "function": function_name,
+                                },
+                                "fields": {
+                                    "value": value,
+                                },
+                                "time": timestamp.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+                        }
+                        executor.submit(send_samples, data)
+                        logger_thread.debug("%s - %s : %s : %s" % (timestamp, grove_name, function_name, value))
+                        sampler_state = STATE_SAMPLER_GROVE
+                    elif (EVENT_SAMPLER_FUNCTION in data_json[EVENT_DATA_KEY]):
+                        continue if sampler_state != STATE_SAMPLER_FUNC
+                        function_name = data_json[EVENT_DATA_KEY][EVENT_SAMPLER_FUNCTION]
+                        sampler_state = STATE_SAMPLER_VALUE
+                    elif (EVENT_SAMPLER_VALUE in data_json[EVENT_DATA_KEY]):
+                        continue if sampler_state != STATE_SAMPLER_VALUE
+                        value = float(data_json[EVENT_DATA_KEY][EVENT_SAMPLER_VALUE])
+                        timestamp = local_tz.localize(datetime.strptime(data_json['timestamp'], "%Y-%m-%dT%H:%M:%S.%f"))
+        
+                        measurment_name = function_name
+                        for entry in MEASUREMENT_NAMES:
+                            if grove_name in entry['groves'] and function_name in entry['funcs']:
+                                measurment_name = entry['name']
+                        data = {
+                                "measurement": measurment_name,
+                                "tags": {
+                                        "node_name": node_name,
+                                        "node_sn": node_sn,
+                                        "grove": grove_name,
+                                        "function": function_name,
+                                },
+                                "fields": {
+                                    "value": value,
+                                },
+                                "time": timestamp.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+                        }
+                        executor.submit(send_samples, data)
+                        logger_thread.debug("%s - %s : %s : %s -- %s" % (timestamp, grove_name, function_name, value, measurment_name))
+                        sampler_state = STATE_SAMPLER_GROVE
+                    else:
+                        sampler_state = STATE_SAMPLER_START
+                    continue
+                else:
+                    break
         except ValueError:
             pass
         except Exception as e:
@@ -207,7 +196,7 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
         if run_event.wait(delay):
             logger_thread.info("Thread Ending")
             break
-
+            
 def main():
     global samples_to_write
     
