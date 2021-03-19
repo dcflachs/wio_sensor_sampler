@@ -129,7 +129,8 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
                     if (EVENT_SAMPLER_START in data_json[EVENT_DATA_KEY]) and ("Start" in data_json[EVENT_DATA_KEY][EVENT_SAMPLER_START]):
                         sampler_state = STATE_SAMPLER_GROVE
                     elif (EVENT_SAMPLER_GROVE in data_json[EVENT_DATA_KEY]):
-                        continue if sampler_state != STATE_SAMPLER_GROVE
+                        if sampler_state != STATE_SAMPLER_GROVE:
+                            continue
                         grove_name = data_json[EVENT_DATA_KEY][EVENT_SAMPLER_GROVE]
                         sampler_state = STATE_SAMPLER_FUNC
                     elif (EVENT_SAMPLER_UPTIME in data_json[EVENT_DATA_KEY]):
@@ -154,11 +155,13 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
                         logger_thread.debug("%s - %s : %s : %s" % (timestamp, grove_name, function_name, value))
                         sampler_state = STATE_SAMPLER_GROVE
                     elif (EVENT_SAMPLER_FUNCTION in data_json[EVENT_DATA_KEY]):
-                        continue if sampler_state != STATE_SAMPLER_FUNC
+                        if sampler_state != STATE_SAMPLER_FUNC:
+                            continue
                         function_name = data_json[EVENT_DATA_KEY][EVENT_SAMPLER_FUNCTION]
                         sampler_state = STATE_SAMPLER_VALUE
                     elif (EVENT_SAMPLER_VALUE in data_json[EVENT_DATA_KEY]):
-                        continue if sampler_state != STATE_SAMPLER_VALUE
+                        if sampler_state != STATE_SAMPLER_VALUE:
+                            continue
                         value = float(data_json[EVENT_DATA_KEY][EVENT_SAMPLER_VALUE])
                         timestamp = local_tz.localize(datetime.strptime(data_json['timestamp'], "%Y-%m-%dT%H:%M:%S.%f"))
         
