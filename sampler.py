@@ -9,6 +9,7 @@ import threading
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 import urllib3
+from urllib3.util import Retry
 from datetime import datetime
 from tzlocal import get_localzone
 import pytz
