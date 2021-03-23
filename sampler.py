@@ -120,7 +120,7 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
         timestamp = None
         try:
             while True:
-                raw = requests.get(url_pop, params={'access_token':node_token}, timeout=20, verify=False)
+                raw = requests.get(url_pop, params={'access_token':node_token}, timeout=20, verify=False, retries=Retry(10))
                 data_json = raw.json()
                 if 'error' in data_json and data_json['error'] == "Node Unknown":
                     logger_thread.debug("Node Thread: %s - Empty Queue" %(node_token))
@@ -191,10 +191,13 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
                 else:
                     break
         except ValueError:
-            pass
+            continue
         except Exception as e:
             logger_thread.error(e)
-            pass
+            continue
+        except NewConnectionError as e:
+            logger_thread.error(e)
+            continue  
         
         if run_event.wait(delay):
             logger_thread.info("Thread Ending")
