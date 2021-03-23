@@ -9,7 +9,6 @@ import threading
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 import urllib3
-from urllib3.util import Retry
 from datetime import datetime
 from tzlocal import get_localzone
 import pytz
@@ -121,7 +120,7 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
         timestamp = None
         try:
             while True:
-                raw = requests.get(url_pop, params={'access_token':node_token}, timeout=20, verify=False, retries=Retry(10))
+                raw = requests.get(url_pop, params={'access_token':node_token}, timeout=20, verify=False)
                 data_json = raw.json()
                 if 'error' in data_json and data_json['error'] == "Node Unknown":
                     logger_thread.debug("Node Thread: %s - Empty Queue" %(node_token))
@@ -193,13 +192,13 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
                     break
         except ValueError:
             continue
-        except Exception as e:
-            logger_thread.error(e)
-            continue
         except NewConnectionError as e:
             logger_thread.error(e)
             continue  
-        
+        except Exception as e:
+            logger_thread.error(e)
+            continue
+            
         if run_event.wait(delay):
             logger_thread.info("Thread Ending")
             break
