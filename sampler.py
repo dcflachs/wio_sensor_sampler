@@ -192,7 +192,7 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
                     break
         except ValueError:
             continue
-        except NewConnectionError as e:
+        except requests.ConnectionError as e:
             logger_thread.error(e)
             continue  
         except Exception as e:
@@ -256,7 +256,7 @@ def main():
             except Exception as e:
                 logger_main.error(e)
                 logger_main.error("Failed to get nodes list!")
-                pass
+                continue
             
             time.sleep(check_delay_s)
 #             print("\n\n")
