@@ -196,7 +196,6 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
                 else:
                     break
         except ValueError as e:
-            logger_thread.debug("Value Error: ", e)
             pass
         except requests.ConnectionError as e:
             logger_thread.error(e)
