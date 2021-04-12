@@ -95,6 +95,7 @@ client = InfluxDBClient(host=influx_host, port=influx_port)
 client.create_database(database_name)
 samples_to_write = []
 local_tz = get_localzone()
+sampler_debug = os.getenv('SAMPLER_DEBUG')
 
 def send_samples(sample):
     global samples_to_write
@@ -127,11 +128,13 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
                     break
                 if (EVENT_DATA_KEY in data_json):
                     if (EVENT_SAMPLER_START in data_json[EVENT_DATA_KEY]) and ("Start" in data_json[EVENT_DATA_KEY][EVENT_SAMPLER_START]):
+                        logger_thread.debug("Got Sampler Start")
                         sampler_state = STATE_SAMPLER_GROVE
                     elif (EVENT_SAMPLER_GROVE in data_json[EVENT_DATA_KEY]):
                         if sampler_state != STATE_SAMPLER_GROVE:
                             continue
                         grove_name = data_json[EVENT_DATA_KEY][EVENT_SAMPLER_GROVE]
+                        logger_thread.debug("Got Grove Name: %s" %(grove_name))
                         sampler_state = STATE_SAMPLER_FUNC
                     elif (EVENT_SAMPLER_UPTIME in data_json[EVENT_DATA_KEY]):
                         grove_name = "SensorSampler"
@@ -158,6 +161,7 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
                         if sampler_state != STATE_SAMPLER_FUNC:
                             continue
                         function_name = data_json[EVENT_DATA_KEY][EVENT_SAMPLER_FUNCTION]
+                        logger_thread.debug("Got Function Name: %s" %(function_name))
                         sampler_state = STATE_SAMPLER_VALUE
                     elif (EVENT_SAMPLER_VALUE in data_json[EVENT_DATA_KEY]):
                         if sampler_state != STATE_SAMPLER_VALUE:
@@ -186,11 +190,13 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
                         logger_thread.debug("%s - %s : %s : %s -- %s" % (timestamp, grove_name, function_name, value, measurment_name))
                         sampler_state = STATE_SAMPLER_GROVE
                     else:
+                        logger_thread.debug("Bad State")
                         sampler_state = STATE_SAMPLER_START
                     continue
                 else:
                     break
-        except ValueError:
+        except ValueError as e:
+            logger_thread.debug("Value Error: ", e)
             pass
         except requests.ConnectionError as e:
             logger_thread.error(e)
@@ -206,7 +212,11 @@ def sampler_thread(delay, run_event, node_base_url, node_token, node_name, node_
 def main():
     global samples_to_write
     
-    logging.basicConfig(format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level=logging.INFO)
+    logger_level = logging.INFO
+    if sampler_debug != None:
+        logger_level = logging.DEBUG
+    
+    logging.basicConfig(format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M', level=logger_level)
     logger_main = logging.getLogger('main')
     
     thread_dict = {}
